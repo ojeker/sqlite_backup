@@ -42,6 +42,26 @@ sqlite-backup --overwrite SOURCE_DATABASE DESTINATION_DATABASE
 The source must be an existing regular database file. Backups are created in a
 temporary sibling file and only published after SQLite has finished the copy.
 
+To verify a completed temporary backup before it is published, use SQLite's
+integrity check:
+
+```bash
+sqlite-backup --integrity-check SOURCE_DATABASE DESTINATION_DATABASE
+```
+
+SQLite busy or locked errors can be retried with a bounded number of additional
+fresh backup attempts. The first delay is 250 ms and doubles up to 2 seconds;
+the default is no retry. Other errors, including invalid paths, permissions,
+and integrity-check failures, are not retried:
+
+```bash
+sqlite-backup --retries 3 SOURCE_DATABASE DESTINATION_DATABASE
+```
+
+When either option is used, the new database is published only after the
+configured backup operation succeeds. A failed backup preserves an existing
+destination, including when `--overwrite` was requested.
+
 ## Install a GitHub release
 
 Install a tagged release directly from GitHub:

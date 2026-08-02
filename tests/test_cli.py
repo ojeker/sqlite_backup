@@ -32,6 +32,8 @@ def test_help_describes_the_command() -> None:
     assert "SOURCE_DATABASE" in result.stdout
     assert "DESTINATION_DATABASE" in result.stdout
     assert "--overwrite" in result.stdout
+    assert "--integrity-check" in result.stdout
+    assert "--retries COUNT" in result.stdout
     assert result.stderr == ""
 
 
@@ -92,6 +94,59 @@ def test_overwrite_replaces_an_existing_destination(tmp_path: Path) -> None:
         assert connection.execute("SELECT value FROM entries").fetchall() == [
             ("saved value",)
         ]
+
+
+def test_integrity_check_verifies_and_publishes_the_backup(tmp_path: Path) -> None:
+    source_database = tmp_path / "source.sqlite"
+    destination_database = tmp_path / "backup.sqlite"
+    create_database(source_database)
+
+    result = run_command(
+        "--integrity-check", str(source_database), str(destination_database)
+    )
+
+    assert result.returncode == 0
+    with sqlite3.connect(destination_database) as connection:
+        assert connection.execute("PRAGMA integrity_check").fetchall() == [("ok",)]
+
+
+def test_negative_retry_count_is_an_argument_error(tmp_path: Path) -> None:
+    source_database = tmp_path / "source.sqlite"
+    destination_database = tmp_path / "backup.sqlite"
+    create_database(source_database)
+
+    result = run_command(
+        "--retries", "-1", str(source_database), str(destination_database)
+    )
+
+    assert result.returncode == 2
+    assert "non-negative integer" in result.stderr
+
+
+def test_non_integer_retry_count_is_an_argument_error(tmp_path: Path) -> None:
+    source_database = tmp_path / "source.sqlite"
+    destination_database = tmp_path / "backup.sqlite"
+    create_database(source_database)
+
+    result = run_command(
+        "--retries", "many", str(source_database), str(destination_database)
+    )
+
+    assert result.returncode == 2
+    assert "non-negative integer" in result.stderr
+
+
+def test_zero_retries_keeps_the_standard_backup_behavior(tmp_path: Path) -> None:
+    source_database = tmp_path / "source.sqlite"
+    destination_database = tmp_path / "backup.sqlite"
+    create_database(source_database)
+
+    result = run_command(
+        "--retries", "0", str(source_database), str(destination_database)
+    )
+
+    assert result.returncode == 0
+    assert destination_database.is_file()
 
 
 def test_source_and_destination_must_differ(tmp_path: Path) -> None:
