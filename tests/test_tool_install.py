@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import sqlite3
 import subprocess
 from pathlib import Path
 
@@ -29,8 +30,17 @@ def test_uv_tool_install_runs_outside_checkout(tmp_path: Path) -> None:
 
     execution_directory = tmp_path / "execution"
     execution_directory.mkdir()
+    source_database = execution_directory / "source.sqlite"
+    destination_database = execution_directory / "backup.sqlite"
+    with sqlite3.connect(source_database) as connection:
+        connection.execute("CREATE TABLE entries (value TEXT)")
+        connection.execute("INSERT INTO entries VALUES ('installed')")
     result = subprocess.run(
-        [str(tool_binary_directory / "sqlite-backup")],
+        [
+            str(tool_binary_directory / "sqlite-backup"),
+            str(source_database),
+            str(destination_database),
+        ],
         check=False,
         capture_output=True,
         text=True,
@@ -39,5 +49,9 @@ def test_uv_tool_install_runs_outside_checkout(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0
-    assert result.stdout == "hello world\n"
+    assert result.stdout == ""
     assert result.stderr == ""
+    with sqlite3.connect(destination_database) as connection:
+        assert connection.execute("SELECT value FROM entries").fetchall() == [
+            ("installed",)
+        ]

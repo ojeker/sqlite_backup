@@ -1,8 +1,7 @@
 # sqlite-backup
 
-`sqlite-backup` will create safe backups of live SQLite databases. This first
-milestone proves uv-based package installation; it currently only prints
-`hello world`.
+`sqlite-backup` creates safe backups of live SQLite databases using SQLite's
+online-backup API.
 
 ## Requirements
 
@@ -30,14 +29,18 @@ Install the current checkout as an isolated command-line tool:
 
 ```bash
 uv tool install .
-sqlite-backup
+sqlite-backup SOURCE_DATABASE DESTINATION_DATABASE
 ```
 
-The command prints:
+The command exits silently on success. It refuses to replace an existing
+destination. Use `--overwrite` only when replacement is intended:
 
-```text
-hello world
+```bash
+sqlite-backup --overwrite SOURCE_DATABASE DESTINATION_DATABASE
 ```
+
+The source must be an existing regular database file. Backups are created in a
+temporary sibling file and only published after SQLite has finished the copy.
 
 ## Install a GitHub release
 
