@@ -4,7 +4,8 @@
 
 Build a Linux command-line tool named `sqlite-backup` that creates a safe copy
 of a *live* SQLite database by using Python's SQLite online-backup API. The
-project is shipped to users as a standalone native Linux executable.
+project is shipped to users as a Python command-line package installed with
+uv from tagged GitHub releases.
 
 The primary invocation is:
 
@@ -54,8 +55,8 @@ behaviour.
 
 ## Project and quality standards
 
-- Use the latest stable supported Python release available in the build
-  environment; keep the minimum supported version explicit in `pyproject.toml`.
+- Use CPython 3.13.14, as pinned in `.python-version`; keep the supported range
+  explicit in `pyproject.toml` and dependencies resolved in `uv.lock`.
 - Keep all packaging, dependency, test, lint, and build configuration in
   `pyproject.toml`.
 - Add focused tests for successful live backups, schema/data preservation,
@@ -89,17 +90,17 @@ exception when one is necessary.
   behaviour. Refactor design debt that makes a safe change difficult instead
   of extending unclear code paths.
 
-## Linux standalone-binary release
+## uv package releases
 
-- The released artifact must run as a standalone Linux executable without a
-  separately installed Python interpreter or project dependencies.
-- Choose the packaging compiler/bundler deliberately (for example, PyInstaller
-  or Nuitka), record the choice and reproducible build command in the README or
-  release documentation, and configure it through the project files.
-- Build and test the artifact on Linux. Verify the produced binary can display
-  `--help` and create a backup in an environment without the source checkout.
-- Keep build outputs, virtual environments, caches, test databases, and
-  generated binaries out of version control.
+- Release source through immutable GitHub version tags. Users install a release
+  with `uv tool install "git+https://github.com/ojeker/sqlite_backup.git@TAG"`.
+- Keep `uv.lock` under version control. Use `uv sync --extra test` for
+  development and `uv run pytest` for verification.
+- Test that `uv tool install .` creates a working command that can run outside
+  the source checkout. Do not introduce native compilation or binary artifacts
+  unless the release strategy is explicitly changed.
+- Keep virtual environments, caches, test databases, and setuptools build
+  outputs out of version control.
 
 ## Change discipline
 

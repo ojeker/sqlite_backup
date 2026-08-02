@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sqlite-backup"
+version = "0.1.0"
+description = "Create safe backups of live SQLite databases."
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+license = "MIT"
+authors = [{ name = "sqlite-backup contributors" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Operating System :: POSIX :: Linux",
+]
+
+[project.scripts]
+sqlite-backup = "sqlite_backup.cli:main"
+
+[project.optional-dependencies]
+test = ["pytest>=8,<9"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

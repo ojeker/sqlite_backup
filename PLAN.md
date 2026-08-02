@@ -2,9 +2,9 @@
 
 ## Decisions
 
-- Ship a standalone Linux `x86_64` executable named `sqlite-backup`.
-- Compile with Nuitka and CPython 3.13. Python 3.13 is selected for stable
-  Nuitka compatibility.
+- Ship `sqlite-backup` as a Python command installed by uv from tagged GitHub
+  releases.
+- Use CPython 3.13.14, pinned by `.python-version` and managed by uv.
 - Use Python's `sqlite3.Connection.backup()` online-backup API to copy live
   SQLite databases.
 - The command shape is:
@@ -16,49 +16,39 @@
 - Existing destinations fail without modification by default. `--overwrite`
   permits replacement only after a successful new backup is ready.
 
-## 1. Prove binary delivery
+## 1. Prove package delivery
 
 - Create `pyproject.toml`, a `src/` package layout, and the `sqlite-backup`
   console entry point.
-- Add Nuitka as a pinned build dependency and document a repeatable one-file
-  Linux build command.
 - Implement only `hello world` at this stage; do not implement backup logic.
-- Build the executable as `sqlite-backup`, run it from a temporary directory
-  outside the checkout, and verify that it prints `hello world`.
-- Add build output to `.gitignore` and add an automated binary smoke test for
-  this milestone.
+- Pin CPython 3.13.14 with `.python-version`, lock dependencies with uv, and
+  install the local package with `uv tool install .`.
+- Run the installed command from a temporary directory outside the checkout
+  and verify that it prints `hello world`.
 
-## 2. Implement and test the CLI
+## 2. Implement and test the CLI and safe online backups
 
 - Replace the placeholder with `argparse` parsing for the two positional paths
-  and `--overwrite`, `--integrity-check`, and `--retries COUNT`.
+  and `--overwrite`. Add `--integrity-check` and `--retries` only together with
+  their behavior in the following milestone.
 - Keep CLI parsing, backup orchestration, and SQLite/filesystem work in focused
-  modules.
-- Use exit code 0 for success, 2 for argument errors, and 1 for operational
-  failures. Send diagnostics to stderr.
-- Validate that the source is an existing regular file, source and destination
-  are different, the destination parent exists and is writable, and retry count
-  is a non-negative integer.
-- Add tests with this implementation for `--help`, positional ordering, flag
-  parsing, validation failures, and exit codes.
-
-## 3. Implement and test safe online backups
-
-- Open the source database read-only and create the copy only with
+  modules. Use exit code 0 for success, 2 for argument errors, and 1 for
+  operational failures. Send diagnostics to stderr and keep success silent.
+- Validate that the source is an existing regular file, the source and
+  destination are different, and the destination parent exists and is writable.
+- Open the source read-only and create the copy only with
   `sqlite3.Connection.backup()`; never manipulate its journal mode, locks, or
-  data.
-- Write every backup to a uniquely named temporary database in the destination
-  directory. Close both SQLite connections before publishing it.
+  data. Write to a uniquely named temporary database in the destination
+  directory and close both connections before publishing it.
 - Reject an existing destination by default. With `--overwrite`, atomically
-  replace it only after the temporary backup has succeeded.
-- Without `--overwrite`, atomically publish without clobbering a destination
-  that appears during the backup. On failure, delete only the temporary file
-  created by this invocation.
-- Add tests at the same time for schema/data preservation, invalid database
-  inputs, source-equals-destination rejection, failed-backup cleanup, default
-  destination preservation, overwrite, and concurrent destination creation.
+  replace it only after a successful temporary backup. Otherwise atomically
+  publish without clobbering a destination that appears during the backup. On
+  failure, delete only the temporary file created by this invocation.
+- Add focused tests alongside the implementation for help and exit codes,
+  validation failures, schema/data preservation, an open source connection,
+  destination preservation, overwrite, and package installation.
 
-## 4. Implement and test optional verification and retries
+## 3. Implement and test optional verification and retries
 
 - `--integrity-check` runs `PRAGMA integrity_check` on the completed temporary
   backup before publication. A result other than `ok` fails and preserves the
@@ -74,14 +64,15 @@
   writer rather than rely on timing and must confirm the backup is readable and
   passes SQLite integrity checking.
 
-## 5. Integrate, release-test, and document
+## 4. Integrate, release-test, and document
 
 - Run the complete test and lint suite defined in `pyproject.toml`.
-- Build the final Nuitka one-file binary and run an end-to-end smoke test from
-  outside the repository: `--help` works and it backs up a sample database
-  without relying on the project checkout or a project Python environment.
-- Document binary usage, all CLI flags, destination-safety semantics, build
-  prerequisites, the reproducible build command, and supported platform.
+- Run an end-to-end `uv tool install .` smoke test from outside the repository.
+- Add GitHub Actions CI for pushes and pull requests to `main`; it installs
+  CPython 3.13.14 through uv and runs the test suite.
+- Publish releases as immutable GitHub tags. Document installation with
+  `uv tool install "git+https://github.com/ojeker/sqlite_backup.git@TAG"`, all
+  CLI flags, and destination-safety semantics.
 
 At every implementation step, write focused deterministic tests with the code
 being added. The final stage adds integration and release validation; it is not
