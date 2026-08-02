@@ -22,7 +22,7 @@ def test_uv_tool_install_runs_outside_checkout(tmp_path: Path) -> None:
     }
 
     subprocess.run(
-        [uv, "tool", "install", "--python", "3.13.14", str(repository_root)],
+        [uv, "tool", "install", "--python", "3.14", str(repository_root)],
         check=True,
         cwd=tmp_path,
         env=environment,

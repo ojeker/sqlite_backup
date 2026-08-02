@@ -55,7 +55,7 @@ behaviour.
 
 ## Project and quality standards
 
-- Use CPython 3.13.14, as pinned in `.python-version`; keep the supported range
+- Use the CPython 3.14 minor line, as pinned in `.python-version`; keep the supported range
   explicit in `pyproject.toml` and dependencies resolved in `uv.lock`.
 - Keep all packaging, dependency, test, lint, and build configuration in
   `pyproject.toml`.

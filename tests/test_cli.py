@@ -31,7 +31,7 @@ def test_help_describes_the_command() -> None:
     assert result.returncode == 0
     assert "SOURCE_DATABASE" in result.stdout
     assert "DESTINATION_DATABASE" in result.stdout
-    assert "--overwrite" in result.stdout
+    assert "--no-overwrite" in result.stdout
     assert "--integrity-check" in result.stdout
     assert "--retries COUNT" in result.stdout
     assert result.stderr == ""
@@ -68,7 +68,22 @@ def test_backup_succeeds_while_source_connection_is_open(tmp_path: Path) -> None
     assert destination_database.is_file()
 
 
-def test_existing_destination_is_preserved_by_default(tmp_path: Path) -> None:
+def test_no_overwrite_preserves_an_existing_destination(tmp_path: Path) -> None:
+    source_database = tmp_path / "source.sqlite"
+    destination_database = tmp_path / "backup.sqlite"
+    create_database(source_database)
+    destination_database.write_text("original destination")
+
+    result = run_command(
+        "--no-overwrite", str(source_database), str(destination_database)
+    )
+
+    assert result.returncode == 1
+    assert destination_database.read_text() == "original destination"
+    assert "destination already exists" in result.stderr
+
+
+def test_existing_destination_is_replaced_by_default(tmp_path: Path) -> None:
     source_database = tmp_path / "source.sqlite"
     destination_database = tmp_path / "backup.sqlite"
     create_database(source_database)
@@ -76,24 +91,22 @@ def test_existing_destination_is_preserved_by_default(tmp_path: Path) -> None:
 
     result = run_command(str(source_database), str(destination_database))
 
-    assert result.returncode == 1
-    assert destination_database.read_text() == "original destination"
-    assert "destination already exists" in result.stderr
-
-
-def test_overwrite_replaces_an_existing_destination(tmp_path: Path) -> None:
-    source_database = tmp_path / "source.sqlite"
-    destination_database = tmp_path / "backup.sqlite"
-    create_database(source_database)
-    destination_database.write_text("original destination")
-
-    result = run_command("--overwrite", str(source_database), str(destination_database))
-
     assert result.returncode == 0
     with sqlite3.connect(destination_database) as connection:
         assert connection.execute("SELECT value FROM entries").fetchall() == [
             ("saved value",)
         ]
+
+
+def test_overwrite_is_not_a_supported_option(tmp_path: Path) -> None:
+    source_database = tmp_path / "source.sqlite"
+    destination_database = tmp_path / "backup.sqlite"
+    create_database(source_database)
+
+    result = run_command("--overwrite", str(source_database), str(destination_database))
+
+    assert result.returncode == 2
+    assert "unrecognized arguments: --overwrite" in result.stderr
 
 
 def test_integrity_check_verifies_and_publishes_the_backup(tmp_path: Path) -> None:

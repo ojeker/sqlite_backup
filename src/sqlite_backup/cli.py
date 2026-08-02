@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 from sqlite_backup.backup import BackupError, create_backup
 
@@ -29,9 +29,9 @@ def build_parser() -> argparse.ArgumentParser:
         description="Create a safe online backup of a SQLite database.",
     )
     parser.add_argument(
-        "--overwrite",
+        "--no-overwrite",
         action="store_true",
-        help="replace an existing destination after a successful backup",
+        help="fail if the destination already exists",
     )
     parser.add_argument(
         "--integrity-check",
@@ -64,7 +64,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
         create_backup(
             source_database=parsed_arguments.source_database,
             destination_database=parsed_arguments.destination_database,
-            overwrite=parsed_arguments.overwrite,
+            overwrite=not parsed_arguments.no_overwrite,
             integrity_check=parsed_arguments.integrity_check,
             retries=parsed_arguments.retries,
         )

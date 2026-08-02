@@ -4,24 +4,24 @@
 
 - Ship `sqlite-backup` as a Python command installed by uv from tagged GitHub
   releases.
-- Use CPython 3.13.14, pinned by `.python-version` and managed by uv.
+- Use the CPython 3.14 minor line, pinned by `.python-version` and managed by uv.
 - Use Python's `sqlite3.Connection.backup()` online-backup API to copy live
   SQLite databases.
 - The command shape is:
 
   ```text
-  sqlite-backup [--overwrite] [--integrity-check] [--retries COUNT] SOURCE_DATABASE DESTINATION_DATABASE
+  sqlite-backup [--no-overwrite] [--integrity-check] [--retries COUNT] SOURCE_DATABASE DESTINATION_DATABASE
   ```
 
-- Existing destinations fail without modification by default. `--overwrite`
-  permits replacement only after a successful new backup is ready.
+- Existing destinations are replaced by default only after a successful new
+  backup is ready. `--no-overwrite` instead fails without modification.
 
 ## 1. Prove package delivery
 
 - Create `pyproject.toml`, a `src/` package layout, and the `sqlite-backup`
   console entry point.
 - Implement only `hello world` at this stage; do not implement backup logic.
-- Pin CPython 3.13.14 with `.python-version`, lock dependencies with uv, and
+- Pin the CPython 3.14 minor line with `.python-version`, lock dependencies with uv, and
   install the local package with `uv tool install .`.
 - Run the installed command from a temporary directory outside the checkout
   and verify that it prints `hello world`.
@@ -29,7 +29,7 @@
 ## 2. Implement and test the CLI and safe online backups
 
 - Replace the placeholder with `argparse` parsing for the two positional paths
-  and `--overwrite`. Add `--integrity-check` and `--retries` only together with
+  and `--no-overwrite`. Add `--integrity-check` and `--retries` only together with
   their behavior in the following milestone.
 - Keep CLI parsing, backup orchestration, and SQLite/filesystem work in focused
   modules. Use exit code 0 for success, 2 for argument errors, and 1 for
@@ -40,13 +40,13 @@
   `sqlite3.Connection.backup()`; never manipulate its journal mode, locks, or
   data. Write to a uniquely named temporary database in the destination
   directory and close both connections before publishing it.
-- Reject an existing destination by default. With `--overwrite`, atomically
-  replace it only after a successful temporary backup. Otherwise atomically
-  publish without clobbering a destination that appears during the backup. On
-  failure, delete only the temporary file created by this invocation.
+- Atomically replace an existing destination by default only after a successful
+  temporary backup. With `--no-overwrite`, reject an existing destination and
+  atomically avoid clobbering one that appears during the backup. On failure,
+  delete only the temporary file created by this invocation.
 - Add focused tests alongside the implementation for help and exit codes,
   validation failures, schema/data preservation, an open source connection,
-  destination preservation, overwrite, and package installation.
+  destination preservation, default replacement, no-overwrite, and package installation.
 
 ## 3. Implement and test optional verification and retries
 
@@ -69,7 +69,7 @@
 - Run the complete test and lint suite defined in `pyproject.toml`.
 - Run an end-to-end `uv tool install .` smoke test from outside the repository.
 - Add GitHub Actions CI for pushes and pull requests to `main`; it installs
-  CPython 3.13.14 through uv and runs the test suite.
+  CPython 3.14 through uv and runs the test suite.
 - Publish releases as immutable GitHub tags. Document installation with
   `uv tool install "git+https://github.com/ojeker/sqlite_backup.git@TAG"`, all
   CLI flags, and destination-safety semantics.

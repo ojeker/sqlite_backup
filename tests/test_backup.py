@@ -63,6 +63,18 @@ def test_destination_created_during_copy_is_preserved(
     assert temporary_backups(tmp_path) == []
 
 
+def test_create_backup_replaces_an_existing_destination_by_default(tmp_path: Path) -> None:
+    source_database = tmp_path / "source.sqlite"
+    destination_database = tmp_path / "backup.sqlite"
+    create_database(source_database)
+    destination_database.write_text("original destination")
+
+    backup.create_backup(source_database, destination_database)
+
+    with sqlite3.connect(destination_database) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM entries").fetchone() == (0,)
+
+
 def sqlite_error(error_code: int, message: str = "SQLite error") -> sqlite3.Error:
     """Create an SQLite error with a result code for retry tests."""
     error = sqlite3.OperationalError(message)
@@ -206,7 +218,7 @@ def test_backup_succeeds_during_a_synchronized_writer_transaction(
     create_database(source_database)
     writer_ready = threading.Event()
     release_writer = threading.Event()
-    writer_errors: list[Exception] = []
+    writer_errors: list[sqlite3.Error] = []
 
     def write_transaction() -> None:
         try:
@@ -215,7 +227,7 @@ def test_backup_succeeds_during_a_synchronized_writer_transaction(
                 connection.execute("INSERT INTO entries VALUES ('live value')")
                 writer_ready.set()
                 release_writer.wait(timeout=5)
-        except Exception as error:
+        except sqlite3.Error as error:
             writer_errors.append(error)
 
     writer = threading.Thread(target=write_transaction)

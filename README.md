@@ -10,16 +10,23 @@ online-backup API.
 ## Development setup
 
 ```bash
-uv python install 3.13.14
+uv python install 3.14
 uv sync --extra test
 ```
 
-The repository pins CPython 3.13.14 in `.python-version`. `uv` installs and
+The repository tracks the CPython 3.14 minor line in `.python-version`. `uv` installs and
 uses that interpreter even if the system Python is a different version.
 
 Run the ordinary tests:
 
 ```bash
+uv run pytest
+```
+
+Run the complete local quality gate:
+
+```bash
+uv run ruff check .
 uv run pytest
 ```
 
@@ -32,11 +39,12 @@ uv tool install .
 sqlite-backup SOURCE_DATABASE DESTINATION_DATABASE
 ```
 
-The command exits silently on success. It refuses to replace an existing
-destination. Use `--overwrite` only when replacement is intended:
+The command exits silently on success. It replaces an existing destination only
+after a new backup has completed successfully. Use `--no-overwrite` when an
+existing destination must be preserved:
 
 ```bash
-sqlite-backup --overwrite SOURCE_DATABASE DESTINATION_DATABASE
+sqlite-backup --no-overwrite SOURCE_DATABASE DESTINATION_DATABASE
 ```
 
 The source must be an existing regular database file. Backups are created in a
@@ -60,7 +68,8 @@ sqlite-backup --retries 3 SOURCE_DATABASE DESTINATION_DATABASE
 
 When either option is used, the new database is published only after the
 configured backup operation succeeds. A failed backup preserves an existing
-destination, including when `--overwrite` was requested.
+destination; `--no-overwrite` also rejects an existing destination before the
+backup begins.
 
 ## Install a GitHub release
 
@@ -72,3 +81,26 @@ uv tool install "git+https://github.com/ojeker/sqlite_backup.git@v0.1.0"
 
 Replace `v0.1.0` with the release tag you want to install. GitHub tags are the
 initial distribution channel; no native binary is produced.
+
+### Publish a release
+
+Releases are immutable annotated Git tags. Before tagging, update the version
+in `pyproject.toml`, refresh the lockfile, and run the full quality gate:
+
+```bash
+uv lock
+uv sync --locked --extra test
+uv run ruff check .
+uv run pytest
+```
+
+Commit and merge the release version to `main`, then create and push an
+annotated tag for that exact commit:
+
+```bash
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
+git push origin vX.Y.Z
+```
+
+Never move, delete, or reuse a published release tag. Publish a new version if
+a release needs correction.

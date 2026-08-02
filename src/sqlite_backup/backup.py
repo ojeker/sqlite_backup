@@ -20,7 +20,7 @@ def create_backup(
     source_database: Path,
     destination_database: Path,
     *,
-    overwrite: bool,
+    overwrite: bool = True,
     integrity_check: bool = False,
     retries: int = 0,
 ) -> None:
